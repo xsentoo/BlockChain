@@ -1,14 +1,9 @@
 package com.uphf.blockchain.Entity;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
-
 public class CoinBase{
     Double Recompense;
     int ExtraNonce;
-    
+
     public CoinBase(Double recompense, int extraNonce) {
         Recompense = recompense;
         ExtraNonce = extraNonce;

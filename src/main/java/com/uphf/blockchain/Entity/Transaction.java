@@ -1,9 +1,5 @@
 package com.uphf.blockchain.Entity;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 public class Transaction{
     String Expediteur ;
     String Destinataire;

@@ -9,8 +9,8 @@ import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
 
 @Service
 public class BlocService {
@@ -22,34 +22,57 @@ public class BlocService {
         return bloc;
     }
 
+    public String genererRandomString()
+    {
+        String charPool = "0123456789abcdefghijklmnopqrstuvwxyz";
+        Random randomNumbers = new Random();
+        char[] ransString = new char[10];
+        for(int i = 0; i<10; i++)
+        {
+            ransString[i] = charPool.charAt(randomNumbers.nextInt(charPool.length()));
+        }
+        String result = new String(ransString);
+        return hasher(result);
+    }
+
     public Header genererHeaderTest()
     {
+        Random randNumber = new Random();
         Header header = new Header(
-            "abc", 
-            LocalDate.parse("2007-12-03"),
-            "abc", 
-            "bcb", 
-            2 );
+            genererRandomString(), 
+            LocalDate.now(),
+            genererRandomString(), 
+            genererRandomString(), 
+            randNumber.nextInt(1000) );
         return header;
     }
 
     public Transaction genererTransactionTest()
     {
-        Transaction transaction = new Transaction("a" , "b " , 0.1);
+        Random randNumber = new Random();
+        Transaction transaction = new Transaction(
+            genererRandomString(), 
+            genererRandomString(), 
+            randNumber.nextDouble()*100
+        );
         return transaction;
     } 
 
     public CoinBase genererCoinbaseTest()
     {
-        CoinBase coinbase = new CoinBase(0.3 , 4);
+        Random randNumber = new Random();
+        CoinBase coinbase = new CoinBase(randNumber.nextDouble()*100 , randNumber.nextInt(1000));
         return coinbase;
     }
 
     public Body genererBodyTest()
     {
-        Transaction trans1 = genererTransactionTest();
-        Transaction trans2 = new Transaction("c" , "b " , 0.5);
-        Body body = new Body(genererCoinbaseTest() , Arrays.asList(trans1,trans2));
+        List<Transaction> transList = new ArrayList<>();
+        for(int i = 0; i< 10; i++)
+        {
+            transList.add(genererTransactionTest());
+        }
+        Body body = new Body(genererCoinbaseTest() , transList);
         return body;
     }
     

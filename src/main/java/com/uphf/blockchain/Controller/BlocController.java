@@ -22,14 +22,11 @@ public class BlocController {
     @GetMapping("/1")
     public void  afficher() {
         blocService.afficherBlock();
-
     }
-
 
     @GetMapping("/2")
     public void afficher2(){
         blocService.afficherBlock();
         blocService.test();
     }
-
 }

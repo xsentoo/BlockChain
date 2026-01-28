@@ -24,12 +24,9 @@ public class BlocService {
         Bloc bloc = this.test;
         System.out.println(bloc.getBlockHeader().getMerkleRoot());
 //        System.out.println(bloc.getBlockBody().getCoinBaseTrans().getExtraNonce());
-//        System.out.println(bloc.getBlockHeader().getMerkleRoot());
-//        System.out.println(bloc.getBlockHeader().getMerkleRoot());
-
     }
 
-    public String hacher(String mot){
+    public String hasher(String mot){
         try{
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] encodehash = digest.digest(mot.getBytes(StandardCharsets.UTF_8));
@@ -39,48 +36,40 @@ public class BlocService {
                 if(hex.length() == 1) {
                     hexString.append('0');
                 }
-
                 hexString.append(hex);
             }
             return hexString.toString();
-
-
-
         }catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("Errrur de hachage ", e);
+            throw new RuntimeException("Erreur de hachage ", e);
         }
     }
 
-    public String hacherTransaction(Transaction transaction) {
+    public String hasherTransaction(Transaction transaction) {
         String result = transaction.getExpediteur() + transaction.getDestinataire();
         result += String.format("%.9f", transaction.getQuantite());
-        return hacher(result);
+        return hasher(result);
     }
 
     public String trouverMerkle(int start, int end) {
-
         List<Transaction> transList = this.test.getBlockBody().getTransactionList();
         if (start ==  end ){
-            return hacherTransaction(transList.get(start));
+            return hasherTransaction(transList.get(start));
         }
         String result = trouverMerkle(start , (start + end)/2);
         result += trouverMerkle((start + end)/2+1,end);
-        return hacher(result);
-
+        return hasher(result);
     }
 
-
-    public String hacherCoinBase(CoinBase coinBase) {
+    public String hasherCoinBase(CoinBase coinBase) {
        String result = String.format("%.9f", coinBase.getRecompense());
        result += String.valueOf(coinBase.getExtraNonce());
-       return hacher(result);
+       return hasher(result);
     }
 
-    public void  test (){
+    public void  test () {
         String merkleroot = trouverMerkle(0,1);
         System.out.println(merkleroot);
     }
-
 }
 
 

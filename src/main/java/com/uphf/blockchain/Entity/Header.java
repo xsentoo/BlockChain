@@ -9,7 +9,18 @@ import java.time.LocalDate;
 
 public  class Header {
     String MerkleRoot;
+    LocalDate TimeStamp;
+    String HashPre;
+    String Target;
+    int Nonce ;
 
+    public Header(String merkleRoot, LocalDate timeStamp, String hashPre, String target, int nonce) {
+        MerkleRoot = merkleRoot;
+        TimeStamp = timeStamp;
+        HashPre = hashPre;
+        Target = target;
+        Nonce = nonce;
+    }
 
     public String getMerkleRoot() {
         return MerkleRoot;
@@ -50,20 +61,4 @@ public  class Header {
     public void setNonce(int nonce) {
         Nonce = nonce;
     }
-
-    LocalDate TimeStamp;
-    String HashPre;
-    String Target;
-    int Nonce ;
-
-
-    public Header(String merkleRoot, LocalDate timeStamp, String hashPre, String target, int nonce) {
-        MerkleRoot = merkleRoot;
-        TimeStamp = timeStamp;
-        HashPre = hashPre;
-        Target = target;
-        Nonce = nonce;
-
-    }
-
 }

@@ -6,6 +6,10 @@ public class Body {
     CoinBase CoinBaseTrans;
     List<Transaction> TransactionList;
 
+    public Body(CoinBase coinBaseTrans, List<Transaction> list) {
+        CoinBaseTrans = coinBaseTrans;
+        TransactionList = list;
+    }
 
     public CoinBase getCoinBaseTrans() {
         return CoinBaseTrans;
@@ -18,13 +22,5 @@ public class Body {
     }
     public void setTransactionList(List<Transaction> transactionList) {
         TransactionList = transactionList;
-    }
-
-
-
-
-    public Body(CoinBase coinBaseTrans, List<Transaction> list) {
-        CoinBaseTrans = coinBaseTrans;
-        TransactionList = list;
     }
 }

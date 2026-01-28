@@ -6,15 +6,14 @@ import lombok.NoArgsConstructor;
 
 public class Transaction{
     String Expediteur ;
+    String Destinataire;
+    Double Quantite;
 
     public Transaction(String expediteur, String destinataire, Double quantite) {
         Expediteur = expediteur;
         Destinataire = destinataire;
         Quantite = quantite;
     }
-
-    String Destinataire;
-    Double Quantite;
 
     public Double getQuantite() {
         return Quantite;
@@ -39,6 +38,4 @@ public class Transaction{
     public void setExpediteur(String expediteur) {
         Expediteur = expediteur;
     }
-
-
 }

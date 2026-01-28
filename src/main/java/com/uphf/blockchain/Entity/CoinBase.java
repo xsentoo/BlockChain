@@ -6,6 +6,14 @@ import lombok.NoArgsConstructor;
 
 
 public class CoinBase{
+    Double Recompense;
+    int ExtraNonce;
+    
+    public CoinBase(Double recompense, int extraNonce) {
+        Recompense = recompense;
+        ExtraNonce = extraNonce;
+    }
+
     public Double getRecompense() {
         return Recompense;
     }
@@ -19,13 +27,6 @@ public class CoinBase{
     }
 
     public void setExtraNonce(int extraNonce) {
-        ExtraNonce = extraNonce;
-    }
-
-    Double Recompense;
-    int ExtraNonce;
-    public CoinBase(Double recompense, int extraNonce) {
-        Recompense = recompense;
         ExtraNonce = extraNonce;
     }
 }

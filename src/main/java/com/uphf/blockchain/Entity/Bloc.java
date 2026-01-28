@@ -11,6 +11,12 @@ import java.time.LocalDate;
 
 public class Bloc {
     Header BlockHeader;
+    Body BlockBody;
+
+    public Bloc(Header blockHeader, Body blockBody) {
+        BlockHeader = blockHeader;
+        BlockBody = blockBody;
+    }
 
     public Body getBlockBody() {
         return BlockBody;
@@ -27,12 +33,4 @@ public class Bloc {
     public void setBlockHeader(Header blockHeader) {
         BlockHeader = blockHeader;
     }
-
-    Body BlockBody;
-
-    public Bloc(Header blockHeader, Body blockBody) {
-        BlockHeader = blockHeader;
-        BlockBody = blockBody;
-    }
-
 }

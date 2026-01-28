@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -20,10 +21,45 @@ public class BlocService {
     Bloc test = new Bloc(Headertest  , Bodytest);
 
 
+    public void afficherHeader(Header header){
+        System.out.println(" HEADER:");
+        System.out.println("  Hash Precedent:" + header.getHashPre());
+        System.out.println("  Merkle Root:" + header.getMerkleRoot());
+        System.out.println("  TimeStamp:" + header.getTimeStamp().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+        System.out.println("  Target (Complexite):" + header.getTarget());
+        System.out.println("  Nonce:" + String.valueOf(header.getNonce()));
+    }
+
+    public void afficherCoinbase(Body body){
+        CoinBase coinBase = body.getCoinBaseTrans();
+        System.out.println("  COINBASE:");
+        System.out.println("   Recompense:" + String.format("%.9f", coinBase.getRecompense()));
+        System.out.println("   ExtraNonce:" + String.valueOf(coinBase.getExtraNonce()));
+    }
+
+    public void afficherTransaction(Transaction transaction){
+        System.out.println("    Expediteur:" + transaction.getExpediteur());
+        System.out.println("    Destinataire:" + transaction.getDestinataire());
+        System.out.println("    Quantite:" + String.format("%.9f", transaction.getQuantite()));
+    }
+
+    public void afficherBody(Body body){
+        Bloc bloc = this.test;
+        System.out.println(" BODY:");
+        afficherCoinbase(bloc.getBlockBody());
+        List<Transaction> transList = bloc.getBlockBody().getTransactionList();
+        System.out.println("  TRANSACTIONS:");
+        for(int i = 0; i<transList.size(); i++) {
+            System.out.println("   Transaction " + String.valueOf(i));
+            afficherTransaction(transList.get(i));
+        }
+    }
+
     public void afficherBlock(){
         Bloc bloc = this.test;
-        System.out.println(bloc.getBlockHeader().getMerkleRoot());
-//        System.out.println(bloc.getBlockBody().getCoinBaseTrans().getExtraNonce());
+        System.out.println("AFFICHAGE DE BLOC");
+        afficherHeader(bloc.getBlockHeader());
+        afficherBody(bloc.getBlockBody());
     }
 
     public String hasher(String mot){

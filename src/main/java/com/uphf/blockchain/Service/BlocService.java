@@ -14,13 +14,45 @@ import java.util.List;
 
 @Service
 public class BlocService {
-    Header Headertest = new Header("abc", LocalDate.parse("2007-12-03") ,"abc" , "bcb" , 2 );
-    Transaction trans1 = new Transaction("a" , "b " , 0.1);
-    Transaction trans2 = new Transaction("c" , "b " , 0.5);
-    Body Bodytest = new Body(new CoinBase(0.3 , 4) , Arrays.asList(trans1,trans2));
-    Bloc test = new Bloc(Headertest  , Bodytest);
+    public Bloc genererBlocTest()
+    {
+        Header headertest = genererHeaderTest();
+        Body bodyTest = genererBodyTest();
+        Bloc bloc = new Bloc(headertest  , bodyTest);
+        return bloc;
+    }
 
+    public Header genererHeaderTest()
+    {
+        Header header = new Header(
+            "abc", 
+            LocalDate.parse("2007-12-03"),
+            "abc", 
+            "bcb", 
+            2 );
+        return header;
+    }
 
+    public Transaction genererTransactionTest()
+    {
+        Transaction transaction = new Transaction("a" , "b " , 0.1);
+        return transaction;
+    } 
+
+    public CoinBase genererCoinbaseTest()
+    {
+        CoinBase coinbase = new CoinBase(0.3 , 4);
+        return coinbase;
+    }
+
+    public Body genererBodyTest()
+    {
+        Transaction trans1 = genererTransactionTest();
+        Transaction trans2 = new Transaction("c" , "b " , 0.5);
+        Body body = new Body(genererCoinbaseTest() , Arrays.asList(trans1,trans2));
+        return body;
+    }
+    
     public void afficherHeader(Header header){
         System.out.println(" HEADER:");
         System.out.println("  Hash Precedent:" + header.getHashPre());
@@ -30,8 +62,7 @@ public class BlocService {
         System.out.println("  Nonce:" + String.valueOf(header.getNonce()));
     }
 
-    public void afficherCoinbase(Body body){
-        CoinBase coinBase = body.getCoinBaseTrans();
+    public void afficherCoinbase(CoinBase coinBase){
         System.out.println("  COINBASE:");
         System.out.println("   Recompense:" + String.format("%.9f", coinBase.getRecompense()));
         System.out.println("   ExtraNonce:" + String.valueOf(coinBase.getExtraNonce()));
@@ -44,10 +75,9 @@ public class BlocService {
     }
 
     public void afficherBody(Body body){
-        Bloc bloc = this.test;
         System.out.println(" BODY:");
-        afficherCoinbase(bloc.getBlockBody());
-        List<Transaction> transList = bloc.getBlockBody().getTransactionList();
+        afficherCoinbase(body.getCoinBaseTrans());
+        List<Transaction> transList = body.getTransactionList();
         System.out.println("  TRANSACTIONS:");
         for(int i = 0; i<transList.size(); i++) {
             System.out.println("   Transaction " + String.valueOf(i));
@@ -55,8 +85,7 @@ public class BlocService {
         }
     }
 
-    public void afficherBlock(){
-        Bloc bloc = this.test;
+    public void afficherBlock(Bloc bloc){
         System.out.println("AFFICHAGE DE BLOC");
         afficherHeader(bloc.getBlockHeader());
         afficherBody(bloc.getBlockBody());
@@ -86,13 +115,12 @@ public class BlocService {
         return hasher(result);
     }
 
-    public String trouverMerkle(int start, int end) {
-        List<Transaction> transList = this.test.getBlockBody().getTransactionList();
+    public String trouverMerkle(List<Transaction> transList, int start, int end) {
         if (start ==  end ){
             return hasherTransaction(transList.get(start));
         }
-        String result = trouverMerkle(start , (start + end)/2);
-        result += trouverMerkle((start + end)/2+1,end);
+        String result = trouverMerkle(transList, start , (start + end)/2);
+        result += trouverMerkle(transList, (start + end)/2+1,end);
         return hasher(result);
     }
 
@@ -102,9 +130,18 @@ public class BlocService {
        return hasher(result);
     }
 
+    public String hasherBody(Body body)
+    {
+        String result = hasherCoinBase(body.getCoinBaseTrans());
+        List<Transaction> transList = body.getTransactionList();
+        result += trouverMerkle(transList, 0, transList.size()-1);
+        return hasher(result);
+    }
+
     public void  test () {
-        String merkleroot = trouverMerkle(0,1);
-        System.out.println(merkleroot);
+        Body bodyTest = genererBodyTest();
+        String merkleroot = hasherBody(bodyTest);
+        System.out.println("Merkle root trouvée:" + merkleroot);
     }
 }
 

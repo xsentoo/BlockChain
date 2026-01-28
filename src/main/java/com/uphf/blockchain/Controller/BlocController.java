@@ -21,12 +21,14 @@ public class BlocController {
 
     @GetMapping("/1")
     public void  afficher() {
-        blocService.afficherBlock();
+        Bloc blocTest = blocService.genererBlocTest();
+        blocService.afficherBlock(blocTest);
     }
 
     @GetMapping("/2")
     public void afficher2(){
-        blocService.afficherBlock();
+        Bloc blocTest = blocService.genererBlocTest();
+        blocService.afficherBlock(blocTest);
         blocService.test();
     }
 }

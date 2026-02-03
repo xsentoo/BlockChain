@@ -4,30 +4,37 @@ import com.uphf.blockchain.Entity.*;
 import com.uphf.blockchain.Service.BlocService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-@Controller
+@RestController
+@RequestMapping("api/bloc")
+@CrossOrigin(origins = "http://localhost:5173")
 
 
 public class BlocController {
     @Autowired
     private  BlocService blocService;
 
-    @GetMapping("/1")
-    public void  afficher() {
-        Bloc blocTest = blocService.genererBlocTest();
-        blocService.afficherBlock(blocTest);
+    @GetMapping("/generer")
+    public Bloc  genererBloc() {
+        Bloc bloc = blocService.genererBlocTest();
+       return bloc;
     }
 
-    @GetMapping("/2")
-    public void afficher2(){
-        Bloc blocTest = blocService.genererBlocTest();
-        blocService.afficherBlock(blocTest);
-        blocService.test();
+    @GetMapping("/miner")
+    public Bloc minerBloc(){
+        Bloc bloc = blocService.genererBlocTest();
+      String merkleroot = blocService.trouverMerkle(
+              bloc.getBlockBody().getTransactionList(),
+              0,bloc.getBlockBody().getTransactionList().size() - 1
+      );
+        bloc.getBlockHeader().setMerkleRoot(merkleroot);
+        blocService.consensus(bloc);
+        return bloc;
     }
 
-    @GetMapping("/3")
-    public void afficher3(){
-        blocService.test2();
-    }
+
 }

@@ -6,10 +6,10 @@ public  class Header {
     String MerkleRoot;
     LocalDate TimeStamp;
     String HashPre;
-    String Target;
+    int  Target;
     int Nonce ;
 
-    public Header(String merkleRoot, LocalDate timeStamp, String hashPre, String target, int nonce) {
+    public Header(String merkleRoot, LocalDate timeStamp, String hashPre, int target, int nonce) {
         MerkleRoot = merkleRoot;
         TimeStamp = timeStamp;
         HashPre = hashPre;
@@ -41,11 +41,11 @@ public  class Header {
         HashPre = hashPre;
     }
 
-    public String getTarget() {
+    public int  getTarget() {
         return Target;
     }
 
-    public void setTarget(String target) {
+    public void setTarget(int target) {
         Target = target;
     }
 

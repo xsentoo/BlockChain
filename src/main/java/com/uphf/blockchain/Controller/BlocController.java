@@ -25,4 +25,9 @@ public class BlocController {
         blocService.afficherBlock(blocTest);
         blocService.test();
     }
+
+    @GetMapping("/3")
+    public void afficher3(){
+        blocService.test2();
+    }
 }

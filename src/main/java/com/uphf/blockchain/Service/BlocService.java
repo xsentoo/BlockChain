@@ -41,8 +41,8 @@ public class BlocService {
         Header header = new Header(
             genererRandomString(), 
             LocalDate.now(),
-            genererRandomString(), 
-            genererRandomString(), 
+            genererRandomString(),
+                3,
             randNumber.nextInt(1000) );
         return header;
     }
@@ -61,7 +61,7 @@ public class BlocService {
     public CoinBase genererCoinbaseTest()
     {
         Random randNumber = new Random();
-        CoinBase coinbase = new CoinBase(randNumber.nextDouble()*100 , randNumber.nextInt(1000));
+        CoinBase coinbase = new CoinBase(randNumber.nextDouble()*100 , 0);
         return coinbase;
     }
 
@@ -166,6 +166,90 @@ public class BlocService {
         String merkleroot = hasherBody(bodyTest);
         System.out.println("Merkle root trouvée:" + merkleroot);
     }
+
+    public boolean validation (int position){
+        List<Bloc> blocList = new ArrayList();
+        for (int i = 0 ; i<6 ; i++){
+            Bloc bloc1 = blocList.get(position-i);
+            Bloc bloc2 = blocList.get(position-i-1);
+            Header header1 = bloc1.getBlockHeader();
+            Header header2 = bloc2.getBlockHeader();
+            if (header1.getHashPre()!=hasherHeader(header2)){
+                return false;
+            }
+            if(!validateTransactions(bloc1.getBlockBody())){
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public String hasherHeader (Header header){
+        String result = header.getHashPre() + String.valueOf(header.getNonce());
+        result=hasher(result);
+        result += header.getTimeStamp().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+        result += header.getMerkleRoot();
+        result = hasher(result);
+        result += header.getTarget();
+        return hasher(result);
+    }
+
+    public boolean validateTransactions(Body body){
+        return true ;
+    }
+
+    public boolean consensus(Bloc bloc){
+        Header header = bloc.getBlockHeader();
+        for(int i = 0 ; i<Integer.MAX_VALUE ; i++){
+            header.setNonce(i);
+            String hash = hasherHeader(header);
+            if(validerHash(hash, header.getTarget())){
+                return true;
+            }
+        }
+        Body body = bloc.getBlockBody();
+
+        CoinBase coinBase = body.getCoinBaseTrans();
+        int extraNonce= coinBase.getExtraNonce();
+        coinBase.setExtraNonce(extraNonce+1);
+        body.setCoinBaseTrans(coinBase);
+        bloc.setBlockBody(body);
+        String merkleroot = hasherBody(body);
+        header.setMerkleRoot(merkleroot);
+        bloc.setBlockHeader(header);
+
+        return consensus(bloc);
+
+    }
+    public boolean validerHash(String hash , int target){
+       int position = 0;
+        while(target>0){
+            if(hash.charAt(position)!='0'){
+                return false;
+            }
+            target--;
+            position++;
+        }
+        return true;
+    }
+
+    public void test2(){
+        Bloc bloc = genererBlocTest();
+        Header header = bloc.getBlockHeader();
+        afficherHeader(header);
+        Body bodyTest = bloc.getBlockBody();
+        String merkleroot = trouverMerkle(bodyTest.getTransactionList(), 0, bodyTest.getTransactionList().size()-1);
+        System.out.println("MerkleRoot " +  merkleroot);
+        header.setMerkleRoot(merkleroot);
+        bloc.setBlockHeader(header);
+        afficherBlock(bloc);
+        consensus(bloc);
+        afficherHeader(bloc.getBlockHeader());
+        System.out.println("Hash de bloc = " + hasherHeader(bloc.getBlockHeader()));
+    }
+
+
+
 }
 
 

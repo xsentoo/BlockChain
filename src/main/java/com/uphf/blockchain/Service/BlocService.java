@@ -68,7 +68,7 @@ public class BlocService {
     public Body genererBodyTest()
     {
         List<Transaction> transList = new ArrayList<>();
-        for(int i = 0; i< 10; i++)
+        for(int i = 0; i< 6; i++)
         {
             transList.add(genererTransactionTest());
         }
@@ -177,7 +177,7 @@ public class BlocService {
             if (header1.getHashPre()!=hasherHeader(header2)){
                 return false;
             }
-            if(!validateTransactions(bloc1.getBlockBody())){
+            if(!validateTransactions(bloc1.getBlockBody(),header1.getMerkleRoot())){
                 return false;
             }
         }
@@ -194,8 +194,48 @@ public class BlocService {
         return hasher(result);
     }
 
-    public boolean validateTransactions(Body body){
-        return true ;
+    public boolean validateTransactions(Body body,String merkleRoot){
+        List<Transaction> transList = body.getTransactionList();
+        String hashCoinBase= hasherCoinBase(body.getCoinBaseTrans());
+
+        int upperBound = 1;
+        while(upperBound<transList.size())
+        {
+            upperBound*=2;
+        }
+        upperBound = upperBound*2 -1;
+        MerkleProof merkleProof= fillMerkleProof(
+                0,
+                transList.size(),
+                0,
+                new MerkleProof(
+                transList.size(),
+                upperBound
+            ),
+                transList);
+        for (int i = 0 ; i< transList.size() ; i++){
+            int actuelle=merkleProof.IndexMapping[i];
+            String hash = "";
+            while(actuelle>0){
+                hash = merkleProof.MerkleTree[actuelle];
+                if (actuelle%2==0){
+                    hash += merkleProof.MerkleTree[actuelle-1];
+                }else {
+                    hash += merkleProof.MerkleTree[actuelle+1];
+                }
+                hash=hasher(hash);
+                actuelle=(actuelle-1)/2;
+                if (hash!=merkleProof.MerkleTree[actuelle]){
+                    return false;
+                }
+            }
+            hash=merkleProof.MerkleTree[actuelle]+hashCoinBase;
+            if (hasher(hash)!=merkleRoot){
+                return false;
+            }
+
+        }
+        return true;
     }
 
     public boolean consensus(Bloc bloc){
@@ -247,6 +287,46 @@ public class BlocService {
         afficherHeader(bloc.getBlockHeader());
         System.out.println("Hash de bloc = " + hasherHeader(bloc.getBlockHeader()));
     }
+
+    MerkleProof fillMerkleProof(int start, int end, int index, MerkleProof merkleProof,List<Transaction> transList)
+    {
+        if(start==end)
+        {
+            merkleProof.IndexMapping[start]=index;
+            merkleProof.MerkleTree[index] = hasherTransaction(transList.get(start));
+            return merkleProof;
+        }
+        merkleProof = fillMerkleProof(start, (start+end)/2, index*2+1, merkleProof,transList);
+        merkleProof = fillMerkleProof((start+end)/2+1, end, index*2+2, merkleProof,transList);
+        merkleProof.MerkleTree[index] = merkleProof.MerkleTree[index*2+1] + merkleProof.MerkleTree[index*2+2];
+        merkleProof.MerkleTree[index]=hasher(merkleProof.MerkleTree[index]);
+        return merkleProof;
+    }
+
+    public void test3()
+    {
+        Body body = genererBodyTest();
+        List<Transaction> testList = body.getTransactionList();
+        System.out.println("tSize:" + testList.size() );
+        int upperBound = 1;
+        while(upperBound<testList.size())
+        {
+            upperBound*=2;
+        }
+        upperBound = upperBound*2 -1;
+        System.out.println("Upperbound:" + upperBound );
+
+        MerkleProof merkleProof = fillMerkleProof(
+                0,
+                testList.size()-1,
+                0,
+                new MerkleProof(
+                        testList.size(),
+                        upperBound
+                ),testList
+        );
+    }
+
 
 
 

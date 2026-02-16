@@ -35,6 +35,10 @@ public class BlocController {
         blocService.consensus(bloc);
         return bloc;
     }
+    @GetMapping("/3")
+    public void afficher3(){
+        blocService.test3();
+    }
 
 
 }

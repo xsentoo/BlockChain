@@ -9,8 +9,7 @@ import {
   Coins,
   Shield,
   Clock,
-  Hash,
-  RefreshCw, // Nouvelle icône pour le bouton générer
+  Hash
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -28,67 +27,64 @@ const blockVariants = {
 
 const App = () => {
   // --- ÉTATS ---
-
-  // 1. Initialisation propre sans erreur de syntaxe
-  const [blocks, setBlocks] = useState([
-    {
-      index: 0,
-      hash: "GENESIS_HASH_000000",
-      prevHash: "0000000000000000",
-      merkleRoot: "ROOT_000000000",
-      timestamp: Date.now(),
-      nonce: 0,
-      data: "Bloc Genèse (Initial)",
-    }
-  ]);
-
+  const [blocks, setBlocks] = useState([]); // On démarre avec un tableau vide, Java va le remplir !
   const [mempool, setMempool] = useState([]);
-  const [currentIndex, setCurrentIndex] = useState(0); // Commence à 0
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTx, setSelectedTx] = useState(null);
   const [selectedBlock, setSelectedBlock] = useState(null);
-  const [loading, setLoading] = useState(false); // État pour le chargement
 
-  // --- FONCTION DE CONNEXION AU JAVA ---
-  const handleGenerateBlock = async () => {
-    setLoading(true);
-    try {
-      // Appel à Spring Boot (choisis .generer() ou .miner() selon ton besoin)
-      // Ici j'utilise miner() pour avoir le vrai hash calculé
-      const response = await apiAffiche.generer();
-      const javaBlock = response.data;
+  // --- CHARGEMENT AUTOMATIQUE DE LA BLOCKCHAIN ---
+  useEffect(() => {
+    const fetchBlockchain = async () => {
+      try {
+        const response = await apiAffiche.getBlockChain(); // Appel de la route /all
+        const javaBlocks = response.data;
 
-      console.log("Bloc reçu de Java:", javaBlock);
+        if (javaBlocks && javaBlocks.length > 0) {
+          // On formate les données de Java pour React
+          const formattedBlocks = javaBlocks.map((javaBlock, index) => {
+            // Jackson (Spring Boot) peut mettre des majuscules ou minuscules, on sécurise :
+            const header = javaBlock.blockHeader || javaBlock.BlockHeader;
+            const body = javaBlock.blockBody || javaBlock.BlockBody;
+            const txList = body?.transactionList || body?.TransactionList || [];
 
-      // Conversion du format Java vers le format de ton App React
-      const newBlock = {
-        index: blocks.length, // L'index est la taille actuelle du tableau
-        hash: javaBlock.BlockHeader.HashPre ? "HASH_CALCULÉ_EN_JAVA" : "En attente...", // Adapter si Java renvoie le hash du bloc courant
-        prevHash: javaBlock.BlockHeader.HashPre,
-        merkleRoot: javaBlock.BlockHeader.MerkleRoot,
-        // Java renvoie souvent une date String "yyyy-MM-dd", on garde tel quel ou on convertit
-        timestamp: javaBlock.BlockHeader.TimeStamp,
-        nonce: javaBlock.BlockHeader.Nonce,
-        // On affiche le nombre de transactions comme "data" principal
-        data: `Transactions: ${javaBlock.BlockBody.TransactionList.length}`,
-        // On garde les transactions réelles pour l'inspection
-        transactions: javaBlock.BlockBody.TransactionList
-      };
+            return {
+              index: index,
+              hash: `BLOCK_HASH_N°${index}`, // Placeholder pour le hash du bloc actuel
+              prevHash: header?.hashPre || header?.HashPre || "0000000000000000",
+              merkleRoot: header?.merkleRoot || header?.MerkleRoot,
+              timestamp: header?.timeStamp || header?.TimeStamp,
+              nonce: header?.nonce || header?.Nonce,
+              transactions: txList,
+              data: `Transactions: ${txList.length}`,
+            };
+          });
 
-      // Ajout du bloc à la liste et défilement vers lui
-      const updatedBlocks = [...blocks, newBlock];
-      setBlocks(updatedBlocks);
-      setCurrentIndex(updatedBlocks.length - 1);
+          // Si c'est le premier chargement ou si un nouveau bloc est arrivé, on met à jour
+          setBlocks((prevBlocks) => {
+            if (prevBlocks.length !== formattedBlocks.length) {
+              // Optionnel : on déplace la caméra sur le tout dernier bloc miné
+              setCurrentIndex(formattedBlocks.length - 1);
+            }
+            return formattedBlocks;
+          });
+        }
+      } catch (error) {
+        console.error("Erreur Backend: Impossible de charger la blockchain.", error);
+      }
+    };
 
-    } catch (error) {
-      console.error("Erreur Backend:", error);
-      alert("Erreur de connexion au serveur Java (Port 8080). Vérifie qu'il est lancé !");
-    } finally {
-      setLoading(false);
-    }
-  };
+    // 1. On charge la blockchain immédiatement à l'ouverture de la page
+    fetchBlockchain();
 
-  // Simulation Mempool (Code existant conservé)
+    // 2. On interroge le serveur Java toutes les 10 secondes pour vérifier les nouveautés
+    const interval = setInterval(fetchBlockchain, 10000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Simulation Mempool (Barre de gauche)
   useEffect(() => {
     const interval = setInterval(() => {
       const newTx = {
@@ -103,26 +99,20 @@ const App = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const moveNext = () =>
-      currentIndex < blocks.length - 1 && setCurrentIndex(currentIndex + 1);
+  const moveNext = () => currentIndex < blocks.length - 1 && setCurrentIndex(currentIndex + 1);
   const movePrev = () => currentIndex > 0 && setCurrentIndex(currentIndex - 1);
 
   const handleSearch = (e) => {
     e.preventDefault();
     const term = searchTerm.trim();
     if (!term) return;
-    const foundIndex =
-        term.length < 8
-            ? blocks.findIndex((b) => b.index.toString() === term)
-            : blocks.findIndex((b) =>
-                b.hash && b.hash.toLowerCase().includes(term.toLowerCase()),
-            );
+    const foundIndex = blocks.findIndex((b) => b.index.toString() === term);
 
     if (foundIndex !== -1) {
       setCurrentIndex(foundIndex);
       setSearchTerm("");
     } else {
-      alert("Introuvable !");
+      alert("Bloc introuvable !");
     }
   };
 
@@ -178,7 +168,6 @@ const App = () => {
 
         {/* 2. SECTION PRINCIPALE */}
         <main className="flex-1 flex flex-col items-center justify-center p-10 relative overflow-hidden">
-
           {/* HEADER & RECHERCHE */}
           <div className="z-20 text-center mb-6 w-full">
             <div className="flex items-center justify-center gap-3 mb-6">
@@ -188,13 +177,12 @@ const App = () => {
               </h1>
             </div>
 
-            {/* BARRE DE RECHERCHE */}
             <form onSubmit={handleSearch} className="flex w-96 mx-auto group shadow-2xl mb-6">
               <div className="relative flex-1">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
                 <input
                     type="text"
-                    placeholder="Index ou Hash..."
+                    placeholder="Rechercher un index..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full bg-slate-800 border border-slate-700 rounded-l-2xl py-3.5 pl-12 pr-4 outline-none focus:border-blue-500 text-sm transition-all"
@@ -205,85 +193,76 @@ const App = () => {
               </button>
             </form>
 
-            {/* --- NOUVEAU BOUTON : GÉNÉRER BLOC JAVA --- */}
-            <button
-                onClick={handleGenerateBlock}
-                disabled={loading}
-                className={`
-              flex items-center gap-2 mx-auto px-8 py-3 rounded-full font-bold uppercase tracking-widest shadow-lg transition-all
-              ${loading ? 'bg-slate-600 cursor-not-allowed' : 'bg-green-600 hover:bg-green-500 hover:scale-105 active:scale-95'}
-            `}
-            >
-              <RefreshCw size={20} className={loading ? "animate-spin" : ""} />
-              {loading ? "Minage en cours..." : "Générer un Bloc (Java)"}
-            </button>
+            {/* L'ancien bouton "Générer un Bloc" a été supprimé ici ! */}
+            <div className="text-slate-500 text-sm flex items-center justify-center gap-2 animate-pulse mt-4">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div> En attente de nouveaux blocs automatiques...
+            </div>
           </div>
 
           {/* 3. CARROUSEL DYNAMIQUE */}
           <div className="relative w-full h-96 flex items-center justify-center">
-            <AnimatePresence mode="popLayout" initial={false}>
-              {blocks.map((block, i) => {
-                const pos = getBlockPosition(i);
-                if (pos.includes("hidden") && Math.abs(i - currentIndex) > 1) return null;
+            {blocks.length === 0 ? (
+                <div className="text-slate-500 font-mono text-lg animate-pulse">Chargement de la blockchain...</div>
+            ) : (
+                <AnimatePresence mode="popLayout" initial={false}>
+                  {blocks.map((block, i) => {
+                    const pos = getBlockPosition(i);
+                    if (pos.includes("hidden") && Math.abs(i - currentIndex) > 1) return null;
 
-                return (
-                    <motion.div
-                        key={block.index} // Utiliser index unique comme clé
-                        variants={blockVariants}
-                        animate={pos}
-                        initial={pos.includes("Left") ? "hiddenLeft" : "hiddenRight"}
-                        exit={pos.includes("Left") ? "hiddenLeft" : "hiddenRight"}
-                        transition={{ type: "spring", stiffness: 200, damping: 25 }}
-                        onClick={() => pos === "center" && setSelectedBlock(block)}
-                        className={`absolute w-85 p-8 rounded-[2.5rem] border shadow-2xl transition-all ${
-                            pos === "center"
-                                ? "bg-gradient-to-br from-blue-600 to-indigo-900 border-blue-300 cursor-pointer hover:scale-105 active:scale-95"
-                                : "bg-slate-800 border-slate-700"
-                        }`}
-                    >
-                      <div className={`text-xs font-mono mb-2 font-black ${pos === "center" ? "text-blue-200" : "text-slate-600"}`}>
-                        BLOCK INDEX # {block.index}
-                      </div>
-                      <div className="font-mono text-[10px] truncate mb-6 opacity-30 bg-black/30 p-2 rounded tracking-widest">
-                        {block.hash}
-                      </div>
+                    return (
+                        <motion.div
+                            key={block.index}
+                            variants={blockVariants}
+                            animate={pos}
+                            initial={pos.includes("Left") ? "hiddenLeft" : "hiddenRight"}
+                            exit={pos.includes("Left") ? "hiddenLeft" : "hiddenRight"}
+                            transition={{ type: "spring", stiffness: 200, damping: 25 }}
+                            onClick={() => pos === "center" && setSelectedBlock(block)}
+                            className={`absolute w-85 p-8 rounded-[2.5rem] border shadow-2xl transition-all ${
+                                pos === "center"
+                                    ? "bg-gradient-to-br from-blue-600 to-indigo-900 border-blue-300 cursor-pointer hover:scale-105 active:scale-95"
+                                    : "bg-slate-800 border-slate-700"
+                            }`}
+                        >
+                          <div className="font-mono text-[10px] truncate mb-6 opacity-30 bg-black/30 p-2 rounded tracking-widest">
+                            {block.hash}
+                          </div>
 
-                      <div className={`font-black leading-none transition-all duration-500 ${pos === "center" ? "text-3xl text-white" : "text-sm text-slate-700"}`}>
-                        {block.data}
-                      </div>
+                          <div className={`font-black leading-none transition-all duration-500 ${pos === "center" ? "text-3xl text-white" : "text-sm text-slate-700"}`}>
+                            BLOCK INDEX # {block.index}
+                          </div>
 
-                      {pos === "center" && (
-                          <motion.div
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              className="mt-8 pt-6 border-t border-white/10 flex items-center justify-between"
-                          >
-                      <span className="text-[10px] uppercase font-bold text-blue-300 animate-pulse flex items-center gap-2">
-                        <Shield size={12} /> Inspect Header
-                      </span>
-                            <span className="text-[10px] font-mono text-blue-200/50">
-                        v1.0.4
-                      </span>
-                          </motion.div>
-                      )}
-                    </motion.div>
-                );
-              })}
-            </AnimatePresence>
+                          {pos === "center" && (
+                              <motion.div
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  className="mt-8 pt-6 border-t border-white/10 flex items-center justify-between"
+                              >
+                        <span className="text-[10px] uppercase font-bold text-blue-300 animate-pulse flex items-center gap-2">
+                          <Shield size={12} /> Inspect Header
+                        </span>
+                                <span className="text-[10px] font-mono text-blue-200/50">v1.0.4</span>
+                              </motion.div>
+                          )}
+                        </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
+            )}
           </div>
 
           {/* NAVIGATION BASSE */}
           <div className="mt-8 flex gap-14 z-20">
             <button
                 onClick={movePrev}
-                disabled={currentIndex === 0}
+                disabled={currentIndex === 0 || blocks.length === 0}
                 className="p-5 rounded-full bg-slate-800 hover:bg-blue-600 disabled:opacity-5 border border-slate-700 shadow-xl transition-all active:scale-90"
             >
               <ArrowLeft size={32} />
             </button>
             <button
                 onClick={moveNext}
-                disabled={currentIndex === blocks.length - 1}
+                disabled={currentIndex === blocks.length - 1 || blocks.length === 0}
                 className="p-5 rounded-full bg-slate-800 hover:bg-blue-600 disabled:opacity-5 border border-slate-700 shadow-xl transition-all active:scale-90"
             >
               <ArrowRight size={32} />
@@ -291,7 +270,7 @@ const App = () => {
           </div>
         </main>
 
-        {/* --- MODALE TRANSACTION --- */}
+        {/* --- MODALE TRANSACTION (Mempool) --- */}
         <AnimatePresence>
           {selectedTx && (
               <motion.div
@@ -301,7 +280,6 @@ const App = () => {
                   className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 p-4"
                   onClick={() => setSelectedTx(null)}
               >
-                {/* ... (Contenu Modale TX inchangé) ... */}
                 <motion.div
                     initial={{ scale: 0.9, y: 30 }}
                     animate={{ scale: 1, y: 0 }}
@@ -342,93 +320,103 @@ const App = () => {
           )}
         </AnimatePresence>
 
-      {/* --- MODALE HEADER DU BLOC --- */}
-      <AnimatePresence>
-        {selectedBlock && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 backdrop-blur-xl flex items-center justify-center z-50 p-4"
-            onClick={() => setSelectedBlock(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.8, rotateX: 15 }}
-              animate={{ scale: 1, rotateX: 0 }}
-              exit={{ scale: 0.8 }}
-              className="bg-slate-900 border border-blue-500/30 p-10 rounded-[3rem] w-full max-w-2xl shadow-[0_0_80px_rgba(59,130,246,0.15)] relative"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                onClick={() => setSelectedBlock(null)}
-                className="absolute top-8 right-8 text-slate-500 hover:text-white"
+        {/* --- MODALE HEADER DU BLOC (Avec Vraies Transactions Java) --- */}
+        <AnimatePresence>
+          {selectedBlock && (
+              <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 bg-black/80 backdrop-blur-xl flex items-center justify-center z-50 p-4"
+                  onClick={() => setSelectedBlock(null)}
               >
-                <X size={28} />
-              </button>
-              <h3 className="text-3xl font-black text-blue-500 mb-10 flex items-center gap-4 uppercase italic tracking-tighter">
-                <Shield size={36} /> Block Header #{selectedBlock.index}
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="md:col-span-2 bg-blue-500/5 p-5 rounded-2xl border border-blue-500/20">
-                  <label className="text-[10px] uppercase font-bold text-blue-400 mb-2 flex items-center gap-2">
-                    <Hash size={14} /> Current Block Hash
-                  </label>
-                  <div className="font-mono text-sm text-blue-100 break-all leading-relaxed">
-                    {selectedBlock.hash}
+                <motion.div
+                    initial={{ scale: 0.8, rotateX: 15 }}
+                    animate={{ scale: 1, rotateX: 0 }}
+                    exit={{ scale: 0.8 }}
+                    className="bg-slate-900 border border-blue-500/30 p-10 rounded-[3rem] w-full max-w-2xl shadow-[0_0_80px_rgba(59,130,246,0.15)] relative max-h-[90vh] overflow-y-auto custom-scrollbar"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                      onClick={() => setSelectedBlock(null)}
+                      className="absolute top-8 right-8 text-slate-500 hover:text-white sticky"
+                  >
+                    <X size={28} />
+                  </button>
+                  <h3 className="text-3xl font-black text-blue-500 mb-10 flex items-center gap-4 uppercase italic tracking-tighter">
+                    <Shield size={36} /> Block Header #{selectedBlock.index}
+                  </h3>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div className="md:col-span-2 bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                      <label className="text-[10px] uppercase font-bold text-slate-500 mb-1 block">Merkle Root</label>
+                      <div className="font-mono text-[10px] text-slate-300 break-all">{selectedBlock.merkleRoot}</div>
+                    </div>
+
+                    <div className="md:col-span-2 bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                      <label className="text-[10px] uppercase font-bold text-slate-500 mb-1 block">Previous Hash</label>
+                      <div className="font-mono text-[10px] text-slate-500 break-all">{selectedBlock.prevHash}</div>
+                    </div>
+
+                    <div className="bg-slate-800/50 p-5 rounded-xl border border-slate-700 flex justify-between items-center">
+                      <div className="flex items-center gap-3 text-slate-400">
+                        <Clock size={18} /> <span className="text-xs font-bold">Time</span>
+                      </div>
+                      <div className="text-sm font-mono text-white">
+                        {selectedBlock.timestamp ? selectedBlock.timestamp : "Inconnu"}
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-800/50 p-5 rounded-xl border border-slate-700 flex justify-between items-center">
+                      <div className="flex items-center gap-3 text-slate-400">
+                        <Cpu size={18} /> <span className="text-xs font-bold">Nonce</span>
+                      </div>
+                      <div className="text-sm font-mono text-yellow-500 font-bold">{selectedBlock.nonce}</div>
+                    </div>
                   </div>
-                </div>
-                <div className="space-y-6">
-                  <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
-                    <label className="text-[10px] uppercase font-bold text-slate-500 mb-1 block">
-                      Merkle Root
+
+                  {/* LISTE DES TRANSACTIONS RÉELLES DE JAVA */}
+                  <div className="bg-blue-600/10 p-5 rounded-xl border border-blue-500/20">
+                    <label className="text-[10px] text-blue-400 font-bold block mb-3 uppercase flex justify-between">
+                      <span>Transactions ({selectedBlock.transactions.length})</span>
                     </label>
-                    <div className="font-mono text-[10px] text-slate-300 break-all">
-                      {selectedBlock.merkleRoot}
+
+                    <div className="max-h-40 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                      {selectedBlock.transactions.map((tx, idx) => {
+                        // Sécurité pour la casse des variables selon Jackson
+                        const sender = tx.expediteur || tx.Expediteur;
+                        const receiver = tx.destinataire || tx.Destinataire;
+                        const amount = tx.quantite || tx.Quantite;
+
+                        return (
+                            <div key={idx} className="flex justify-between items-center bg-slate-900/80 p-3 rounded-lg border border-slate-700/50">
+                              <div className="flex flex-col w-[40%]">
+                                <span className="text-[8px] text-slate-500 font-bold">FROM</span>
+                                <span className="text-[10px] font-mono text-slate-300 truncate">{sender}</span>
+                              </div>
+                              <div className="flex flex-col w-[40%]">
+                                <span className="text-[8px] text-slate-500 font-bold">TO</span>
+                                <span className="text-[10px] font-mono text-slate-300 truncate">{receiver}</span>
+                              </div>
+                              <div className="flex flex-col items-end w-[20%]">
+                                <span className="text-[8px] text-slate-500 font-bold">AMOUNT</span>
+                                <span className="text-xs font-bold text-yellow-500">{amount ? amount.toFixed(2) : 0}</span>
+                              </div>
+                            </div>
+                        );
+                      })}
+
+                      {selectedBlock.transactions.length === 0 && (
+                          <div className="text-sm text-slate-500 italic text-center py-4">Aucune transaction dans ce bloc</div>
+                      )}
                     </div>
                   </div>
-                  <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
-                    <label className="text-[10px] uppercase font-bold text-slate-500 mb-1 block">
-                      Previous Hash
-                    </label>
-                    <div className="font-mono text-[10px] text-slate-500 break-all">
-                      {selectedBlock.prevHash}
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-6">
-                  <div className="bg-slate-800/50 p-5 rounded-xl border border-slate-700 flex justify-between items-center">
-                    <div className="flex items-center gap-3 text-slate-400">
-                      <Clock size={18} />{" "}
-                      <span className="text-xs font-bold">Time</span>
-                    </div>
-                    <div className="text-sm font-mono text-white">
-                      {new Date(selectedBlock.timestamp).toLocaleTimeString()}
-                    </div>
-                  </div>
-                  <div className="bg-slate-800/50 p-5 rounded-xl border border-slate-700 flex justify-between items-center">
-                    <div className="flex items-center gap-3 text-slate-400">
-                      <Cpu size={18} />{" "}
-                      <span className="text-xs font-bold">Nonce</span>
-                    </div>
-                    <div className="text-sm font-mono text-yellow-500 font-bold">
-                      {selectedBlock.nonce}
-                    </div>
-                  </div>
-                  <div className="bg-blue-600/20 p-5 rounded-xl border border-blue-500/30">
-                    <label className="text-[10px] text-blue-400 font-bold block mb-1 uppercase">
-                      Block Data
-                    </label>
-                    <div className="text-lg font-black italic">
-                      "{selectedBlock.data}"
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+
+                </motion.div>
+              </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
   );
 };
 

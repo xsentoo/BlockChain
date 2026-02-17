@@ -26,6 +26,7 @@ public class BlocController {
 
     @GetMapping("/generer")
     public Bloc  genererBloc() {
+        blocService.remplirMempool();
         Bloc bloc = blocService.genererBlocTest();
        return bloc;
     }

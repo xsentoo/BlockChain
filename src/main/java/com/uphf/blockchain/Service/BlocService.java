@@ -1,5 +1,5 @@
 package com.uphf.blockchain.Service;
-
+import org.springframework.scheduling.annotation.Scheduled;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -90,7 +90,7 @@ public class BlocService {
             genererRandomString(), 
             LocalDate.now(),
             genererRandomString(),
-                3,
+                5,
             randNumber.nextInt(1000) );
         return header;
     }
@@ -421,6 +421,21 @@ public class BlocService {
         afficherBlockChain();
         minerBloc();
         afficherBlockChain();
+    }
+    @Scheduled(fixedRate = 10)
+    public void minageAutomatique() {
+        remplirMempool();
+        System.out.println(" [AUTO] Minage d'un nouveau bloc en cours (Toutes les 5 min)...");
+        Bloc bloc = genererBlocTest();
+        String merkleroot = trouverMerkle(
+                bloc.getBlockBody().getTransactionList(),
+                0, bloc.getBlockBody().getTransactionList().size() - 1
+        );
+        bloc.getBlockHeader().setMerkleRoot(merkleroot);
+        consensus(bloc);
+        blockchain.add(bloc);
+        sauvegarderEnJson();
+        System.out.println(" [AUTO] Bloc automatique généré et sauvegardé !");
     }
 
 

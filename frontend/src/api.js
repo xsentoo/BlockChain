@@ -9,7 +9,8 @@ const api = axios.create({
 });
 export const apiAffiche = {
     generer: () => api.get("generer"),
-    miner: () => api.get("miner")
+    miner: () => api.get("miner"),
+    getBlockChain:()=>api.get("all")
 };
 
 export default api;

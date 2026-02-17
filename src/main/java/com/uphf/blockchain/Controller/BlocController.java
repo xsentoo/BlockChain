@@ -91,4 +91,9 @@ public class BlocController {
     public List<Transaction> getMempool() {
         return blocService.mempool;
     }
+
+    @GetMapping("/validate")
+    public void testValider(){
+        blocService.testValidation();
+    }
 }

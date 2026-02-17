@@ -228,14 +228,13 @@ public class BlocService {
         System.out.println("Merkle root trouvée:" + merkleroot);
     }
 
-    public boolean validation (int position){
-        List<Bloc> blocList = new ArrayList();
+    public boolean validation (List<Bloc> blocList, int position){
         for (int i = 0 ; i<6 ; i++){
             Bloc bloc1 = blocList.get(position-i);
             Bloc bloc2 = blocList.get(position-i-1);
             Header header1 = bloc1.getBlockHeader();
             Header header2 = bloc2.getBlockHeader();
-            if (header1.getHashPre()!=hasherHeader(header2)){
+            if (!header1.getHashPre().equals(hasherHeader(header2))){
                 return false;
             }
             if(!validateTransactions(bloc1.getBlockBody(),header1.getMerkleRoot())){
@@ -440,6 +439,37 @@ public class BlocService {
         afficherBlockChain();
     }
 
+    public void testValidation()
+    {
+        chargerDepuisJson();
+        List<Bloc> blocList = blockchain;
+        System.out.println("TEST VALIDATION");
+        System.out.println("TEST 1: Blocs normaux  Valide:" + validation(blocList, blocList.size()-1));
+        Bloc testBloc = genererBlocTest();
+        blocList.add(testBloc);
+        System.out.println("TEST 2: Bloc hash precedent incorrect  Valide:" + validation(blocList,blocList.size()-1));
+        blocList.removeLast();
+
+        testBloc = blocList.getLast();
+        blocList.removeLast();
+        Body testBody = genererBodyTest();
+        testBloc.setBlockBody(testBody);
+        blocList.add(testBloc);
+        System.out.println("TEST 3: Body different  Valide:" + validation(blocList,blocList.size()-1));
+        blocList.removeLast();
+
+        testBloc = blocList.getLast();
+        blocList.removeLast();
+        testBody = testBloc.getBlockBody();
+        List<Transaction> testTransList = testBody.getTransactionList();
+        testTransList.removeLast();
+        testTransList.add(genererTransactionTest());
+        testBody.setTransactionList(testTransList);
+        testBloc.setBlockBody(testBody);
+        blocList.add(testBloc);
+        System.out.println("TEST 4: Une transaction fausse  Valide:" + validation(blocList,blocList.size()-1));
+        blocList.removeLast();
+    }
 
 
 

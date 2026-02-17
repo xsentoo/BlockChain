@@ -99,7 +99,7 @@ const App = () => {
       setToken(res.data);
       afficherNotification("Connexion réussie !");
     } catch (err) {
-      afficherNotification("Identifiants incorrects ❌");
+      afficherNotification("Identifiants incorrects ");
     }
   };
 
@@ -127,7 +127,7 @@ const App = () => {
     const montantNum = parseFloat(montant);
 
     if (montantNum > solde) {
-      afficherNotification("Fonds insuffisants ! ❌");
+      afficherNotification("Fonds insuffisants ! ");
       return;
     }
 
@@ -143,7 +143,7 @@ const App = () => {
       setMempool(resMempool.data);
 
     } catch (err) {
-      afficherNotification("Erreur de transaction ❌");
+      afficherNotification("Erreur de transaction ");
     }
   };
 
@@ -546,5 +546,6 @@ const App = () => {
       </div>
   );
 };
+
 
 export default App;

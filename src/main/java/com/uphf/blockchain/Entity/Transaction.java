@@ -10,6 +10,9 @@ public class Transaction{
         Destinataire = destinataire;
         Quantite = quantite;
     }
+    public Transaction(){
+
+    }
 
     public Double getQuantite() {
         return Quantite;

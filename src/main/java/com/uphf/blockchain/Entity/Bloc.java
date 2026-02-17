@@ -8,6 +8,9 @@ public class Bloc {
         BlockHeader = blockHeader;
         BlockBody = blockBody;
     }
+    public Bloc(){
+
+    }
 
     public Body getBlockBody() {
         return BlockBody;

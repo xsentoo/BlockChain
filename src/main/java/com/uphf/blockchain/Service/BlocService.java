@@ -1,8 +1,15 @@
 package com.uphf.blockchain.Service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.uphf.blockchain.Entity.*;
+import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Service;
 
+
+import java.io.File;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -14,6 +21,37 @@ import java.util.Random;
 
 @Service
 public class BlocService {
+
+    public List<Bloc> blockchain = new ArrayList<>();
+    private ObjectMapper objectMapper;
+    private final String FILE_NAME = "blockchain.json";
+
+    public BlocService() {
+        this.objectMapper = new ObjectMapper();
+        this.objectMapper.registerModule(new JavaTimeModule()); // Obligatoire pour lire les "LocalDate"
+    }
+    @PostConstruct
+    public void chargerDepuisJson() {
+        File fichier = new File(FILE_NAME);
+        if (fichier.exists()) {
+            try {
+                blockchain = objectMapper.readValue(fichier, new TypeReference<List<Bloc>>() {});
+                System.out.println(" Blockchain chargée depuis le JSON ! (" + blockchain.size() + " blocs)");
+            } catch (IOException e) {
+                System.out.println(" Erreur de lecture du JSON : " + e.getMessage());
+            }
+        } else {
+            System.out.println(" Aucun fichier JSON trouvé, démarrage d'une blockchain vide.");
+        }
+    }
+    public void sauvegarderEnJson() {
+        try {
+            objectMapper.writerWithDefaultPrettyPrinter().writeValue(new File(FILE_NAME), blockchain);
+            System.out.println(" Blockchain sauvegardée dans " + FILE_NAME);
+        } catch (IOException e) {
+            System.out.println(" Erreur d'écriture du JSON : " + e.getMessage());
+        }
+    }
     public Bloc genererBlocTest()
     {
         Header headertest = genererHeaderTest();

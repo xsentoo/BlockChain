@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("api/bloc")
 @CrossOrigin(origins = "http://localhost:5173")
@@ -17,6 +19,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class BlocController {
     @Autowired
     private  BlocService blocService;
+    @GetMapping("/all")
+    public List<Bloc> getAllBlocs() {
+        return blocService.blockchain;
+    }
 
     @GetMapping("/generer")
     public Bloc  genererBloc() {
@@ -33,6 +39,8 @@ public class BlocController {
       );
         bloc.getBlockHeader().setMerkleRoot(merkleroot);
         blocService.consensus(bloc);
+        blocService.blockchain.add(bloc);
+        blocService.sauvegarderEnJson();
         return bloc;
     }
     @GetMapping("/3")

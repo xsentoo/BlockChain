@@ -8,6 +8,9 @@ public class CoinBase{
         Recompense = recompense;
         ExtraNonce = extraNonce;
     }
+    public CoinBase(){
+
+    }
 
     public Double getRecompense() {
         return Recompense;

@@ -68,7 +68,7 @@ public class BlocService {
     public Body genererBodyTest()
     {
         List<Transaction> transList = new ArrayList<>();
-        for(int i = 0; i< 6; i++)
+        for(int i = 0; i< 4; i++)
         {
             transList.add(genererTransactionTest());
         }
@@ -206,7 +206,7 @@ public class BlocService {
         upperBound = upperBound*2 -1;
         MerkleProof merkleProof= fillMerkleProof(
                 0,
-                transList.size(),
+                transList.size() -1,
                 0,
                 new MerkleProof(
                 transList.size(),
@@ -219,18 +219,18 @@ public class BlocService {
             while(actuelle>0){
                 hash = merkleProof.MerkleTree[actuelle];
                 if (actuelle%2==0){
-                    hash += merkleProof.MerkleTree[actuelle-1];
+                    hash = merkleProof.MerkleTree[actuelle-1] + hash;
                 }else {
                     hash += merkleProof.MerkleTree[actuelle+1];
                 }
                 hash=hasher(hash);
                 actuelle=(actuelle-1)/2;
-                if (hash!=merkleProof.MerkleTree[actuelle]){
+                if (!merkleProof.MerkleTree[actuelle].equals(hash)){
                     return false;
                 }
             }
-            hash=merkleProof.MerkleTree[actuelle]+hashCoinBase;
-            if (hasher(hash)!=merkleRoot){
+            hash=hashCoinBase+merkleProof.MerkleTree[actuelle];
+            if (!merkleRoot.equals(hasher(hash))){
                 return false;
             }
 
@@ -325,6 +325,11 @@ public class BlocService {
                         upperBound
                 ),testList
         );
+        String mroot = trouverMerkle(testList, 0, testList.size()-1);
+        System.out.println("Merkle Root:" + mroot );
+        String hashBody = hasherBody(body);
+        System.out.println("Hash body:" + hashBody );
+        System.out.println("Valide:" + validateTransactions(body, hashBody) );
     }
 
 

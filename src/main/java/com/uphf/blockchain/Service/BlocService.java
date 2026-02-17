@@ -25,7 +25,8 @@ public class BlocService {
     public List<Bloc> blockchain = new ArrayList<>();
     public List<Transaction> mempool = new ArrayList<>();
     private ObjectMapper objectMapper;
-    private final String FILE_NAME = "blockchain.json";
+    private final String FILE_NAME_BLOCKCHAIN = "blockchain.json";
+    private final String FILE_NAME_MEMPOOL = "mempool.json";
 
     public BlocService() {
         this.objectMapper = new ObjectMapper();
@@ -33,7 +34,7 @@ public class BlocService {
     }
     @PostConstruct
     public void chargerDepuisJson() {
-        File fichier = new File(FILE_NAME);
+        File fichier = new File(FILE_NAME_BLOCKCHAIN);
         if (fichier.exists()) {
             try {
                 blockchain = objectMapper.readValue(fichier, new TypeReference<List<Bloc>>() {});
@@ -44,11 +45,23 @@ public class BlocService {
         } else {
             System.out.println(" Aucun fichier JSON trouvé, démarrage d'une blockchain vide.");
         }
+        fichier = new File(FILE_NAME_MEMPOOL);
+        if (fichier.exists()) {
+            try {
+                mempool = objectMapper.readValue(fichier, new TypeReference<List<Transaction>>() {});
+                System.out.println(" Mempool chargé depuis le JSON ! (" + mempool.size() + " transactions)");
+            } catch (IOException e) {
+                System.out.println(" Erreur de lecture du JSON : " + e.getMessage());
+            }
+        } else {
+            System.out.println(" Aucun fichier JSON trouvé, démarrage d'un mempool vide.");
+        }
     }
     public void sauvegarderEnJson() {
         try {
-            objectMapper.writerWithDefaultPrettyPrinter().writeValue(new File(FILE_NAME), blockchain);
-            System.out.println(" Blockchain sauvegardée dans " + FILE_NAME);
+            objectMapper.writerWithDefaultPrettyPrinter().writeValue(new File(FILE_NAME_MEMPOOL), mempool);
+            objectMapper.writerWithDefaultPrettyPrinter().writeValue(new File(FILE_NAME_BLOCKCHAIN), blockchain);
+            System.out.println(" Blockchain sauvegardée dans " + FILE_NAME_BLOCKCHAIN);
         } catch (IOException e) {
             System.out.println(" Erreur d'écriture du JSON : " + e.getMessage());
         }
@@ -321,8 +334,11 @@ public class BlocService {
         return true;
     }
 
+    @Scheduled(fixedRate = 10)
     public void minerBloc()
     {
+
+        chargerDepuisJson();
         Body body = genererBodyTest();
         Bloc blocPrecedent = blockchain.getLast();
         String hashPrecedent = hasherHeader(blocPrecedent.getBlockHeader());
@@ -331,7 +347,7 @@ public class BlocService {
             merkleRoot, 
             LocalDate.now(),
             hashPrecedent,
-                3,
+                5,
             0);
         Bloc newBloc = new Bloc(header,body);
         if(consensus(newBloc))
@@ -340,9 +356,10 @@ public class BlocService {
             sauvegarderEnJson();
             for(int i = 0; i< 4; i++)
             {
-                mempool.remove(i);
                 mempool.add(genererTransactionTest());
+                mempool.remove(i);
             }
+            sauvegarderEnJson();
         }
     }
 
@@ -422,21 +439,7 @@ public class BlocService {
         minerBloc();
         afficherBlockChain();
     }
-    @Scheduled(fixedRate = 10)
-    public void minageAutomatique() {
-        remplirMempool();
-        System.out.println(" [AUTO] Minage d'un nouveau bloc en cours (Toutes les 5 min)...");
-        Bloc bloc = genererBlocTest();
-        String merkleroot = trouverMerkle(
-                bloc.getBlockBody().getTransactionList(),
-                0, bloc.getBlockBody().getTransactionList().size() - 1
-        );
-        bloc.getBlockHeader().setMerkleRoot(merkleroot);
-        consensus(bloc);
-        blockchain.add(bloc);
-        sauvegarderEnJson();
-        System.out.println(" [AUTO] Bloc automatique généré et sauvegardé !");
-    }
+
 
 
 

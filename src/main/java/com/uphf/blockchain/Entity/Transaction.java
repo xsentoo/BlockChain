@@ -1,17 +1,49 @@
 package com.uphf.blockchain.Entity;
 
-public class Transaction{
-    String Expediteur ;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.Signature;
+import java.util.Base64;
+
+public class Transaction {
+    String Expediteur;
     String Destinataire;
     Double Quantite;
+    String SignatureTx;
+
+    public Transaction() {}
 
     public Transaction(String expediteur, String destinataire, Double quantite) {
-        Expediteur = expediteur;
-        Destinataire = destinataire;
-        Quantite = quantite;
+        this.Expediteur = expediteur;
+        this.Destinataire = destinataire;
+        this.Quantite = quantite;
     }
-    public Transaction(){
 
+    public void signerTransaction(PrivateKey privateKey) {
+        try {
+            String donnees = Expediteur + Destinataire + Quantite;
+            Signature rsa = Signature.getInstance("SHA256withRSA");
+            rsa.initSign(privateKey);
+            rsa.update(donnees.getBytes());
+            byte[] signatureBytes = rsa.sign();
+            this.SignatureTx = Base64.getEncoder().encodeToString(signatureBytes);
+        } catch (Exception e) {
+            throw new RuntimeException("Erreur lors de la signature", e);
+        }
+    }
+
+    public boolean verifierSignature(PublicKey publicKey) {
+        if (this.SignatureTx == null) return false;
+        try {
+            String donnees = Expediteur + Destinataire + Quantite;
+            Signature rsa = Signature.getInstance("SHA256withRSA");
+            rsa.initVerify(publicKey);
+            rsa.update(donnees.getBytes());
+            byte[] signatureBytes = Base64.getDecoder().decode(this.SignatureTx);
+            return rsa.verify(signatureBytes);
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public Double getQuantite() {
@@ -36,5 +68,13 @@ public class Transaction{
 
     public void setExpediteur(String expediteur) {
         Expediteur = expediteur;
+    }
+
+    public String getSignatureTx() {
+        return SignatureTx;
+    }
+
+    public void setSignatureTx(String signatureTx) {
+        SignatureTx = signatureTx;
     }
 }

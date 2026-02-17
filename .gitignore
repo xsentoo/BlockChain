@@ -34,3 +34,4 @@ build/
 
 ### Contenu site ###
 /blockchain.json
+/mempool.json

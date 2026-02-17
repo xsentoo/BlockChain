@@ -9,14 +9,16 @@ import {
   Coins,
   Shield,
   Clock,
-  Hash
+  Wallet,
+  Send,
+  Lock,
+  LogOut,
+  PlusCircle, // Nouveau !
+  Copy        // Nouveau !
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-
-// --- IMPORT DE L'API CONNECTÉE AU BACKEND JAVA ---
 import { apiAffiche } from "./api";
 
-// --- CONFIGURATION ANIMATIONS ---
 const blockVariants = {
   center: { x: 0, scale: 1, opacity: 1, zIndex: 10, filter: "blur(0px)" },
   left: { x: -320, scale: 0.8, opacity: 0.3, zIndex: 5, filter: "blur(1px)" },
@@ -26,79 +28,123 @@ const blockVariants = {
 };
 
 const App = () => {
-  // --- ÉTATS ---
-  const [blocks, setBlocks] = useState([]); // On démarre avec un tableau vide, Java va le remplir !
-  const [mempool, setMempool] = useState([]);
+  // --- ÉTATS BLOCKCHAIN ---
+  const [blocks, setBlocks] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedTx, setSelectedTx] = useState(null);
   const [selectedBlock, setSelectedBlock] = useState(null);
 
-  // --- CHARGEMENT AUTOMATIQUE DE LA BLOCKCHAIN ---
+  // --- ÉTATS SÉCURITÉ & WALLET ---
+  const [token, setToken] = useState(null);
+  const [username, setUsername] = useState("admin");
+  const [password, setPassword] = useState("azerty");
+  const [destinataire, setDestinataire] = useState("");
+  const [montant, setMontant] = useState("");
+  const [notification, setNotification] = useState("");
+
+  // NOUVEAU : Solde du joueur et adresse de test
+  const [solde, setSolde] = useState(0);
+  const adresseTest = "bc1q9x3j7zwyt4d5g8p2m6vhkq9x3j7z"; // Fausse adresse pour tester
+
+  // --- CHARGEMENT AUTOMATIQUE ---
   useEffect(() => {
     const fetchBlockchain = async () => {
       try {
-        const response = await apiAffiche.getBlockChain(); // Appel de la route /all
+        const response = await apiAffiche.getBlockChain();
         const javaBlocks = response.data;
 
         if (javaBlocks && javaBlocks.length > 0) {
-          // On formate les données de Java pour React
           const formattedBlocks = javaBlocks.map((javaBlock, index) => {
-            // Jackson (Spring Boot) peut mettre des majuscules ou minuscules, on sécurise :
             const header = javaBlock.blockHeader || javaBlock.BlockHeader;
             const body = javaBlock.blockBody || javaBlock.BlockBody;
             const txList = body?.transactionList || body?.TransactionList || [];
 
             return {
               index: index,
-              hash: `BLOCK_HASH_N°${index}`, // Placeholder pour le hash du bloc actuel
+              hash: `BLOCK_HASH_N°${index}`,
               prevHash: header?.hashPre || header?.HashPre || "0000000000000000",
               merkleRoot: header?.merkleRoot || header?.MerkleRoot,
               timestamp: header?.timeStamp || header?.TimeStamp,
               nonce: header?.nonce || header?.Nonce,
               transactions: txList,
-              data: `Transactions: ${txList.length}`,
             };
           });
 
-          // Si c'est le premier chargement ou si un nouveau bloc est arrivé, on met à jour
           setBlocks((prevBlocks) => {
             if (prevBlocks.length !== formattedBlocks.length) {
-              // Optionnel : on déplace la caméra sur le tout dernier bloc miné
               setCurrentIndex(formattedBlocks.length - 1);
             }
             return formattedBlocks;
           });
         }
       } catch (error) {
-        console.error("Erreur Backend: Impossible de charger la blockchain.", error);
+        console.error("Erreur Backend", error);
       }
     };
 
-    // 1. On charge la blockchain immédiatement à l'ouverture de la page
     fetchBlockchain();
-
-    // 2. On interroge le serveur Java toutes les 10 secondes pour vérifier les nouveautés
     const interval = setInterval(fetchBlockchain, 10000);
-
     return () => clearInterval(interval);
   }, []);
 
-  // Simulation Mempool (Barre de gauche)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const newTx = {
-        id: `tx_${Math.floor(Math.random() * 10000)}`,
-        from: `bc1q${Math.random().toString(36).substring(7)}`,
-        to: `bc1q${Math.random().toString(36).substring(7)}`,
-        amount: (Math.random() * 2).toFixed(4),
-        fees: (Math.random() * 0.001).toFixed(6),
-      };
-      setMempool((prev) => [newTx, ...prev].slice(0, 10));
-    }, 5000);
-    return () => clearInterval(interval);
-  }, []);
+  // --- FONCTIONS WALLET & SÉCURITÉ ---
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await apiAffiche.login(username, password);
+      setToken(res.data);
+      afficherNotification("Connexion réussie !");
+    } catch (err) {
+      afficherNotification("Identifiants incorrects ❌");
+    }
+  };
 
+  const handleLogout = () => {
+    setToken(null);
+    setSolde(0); // On remet le solde à zéro à la déconnexion
+    afficherNotification("Déconnexion réussie");
+  };
+
+  const handleAjouterFonds = () => {
+    setSolde(solde + 50); // Ajoute 50 faux BTC
+    afficherNotification("+ 50 BTC ajoutés (Mode Test)");
+  };
+
+  const handleCopyAddress = () => {
+    navigator.clipboard.writeText(adresseTest);
+    setDestinataire(adresseTest); // Colle l'adresse directement dans l'input !
+    afficherNotification("Adresse copiée et collée !");
+  };
+
+  const handleSendTransaction = async (e) => {
+    e.preventDefault();
+    if (!destinataire || !montant) return;
+
+    const montantNum = parseFloat(montant);
+
+    // Vérification du solde !
+    if (montantNum > solde) {
+      afficherNotification("Fonds insuffisants ! ❌");
+      return;
+    }
+
+    try {
+      const res = await apiAffiche.creerTransaction(token, destinataire, montantNum);
+      afficherNotification(res.data);
+      setSolde(solde - montantNum); // On déduit l'argent du solde
+      setDestinataire("");
+      setMontant("");
+    } catch (err) {
+      afficherNotification("Erreur de transaction ❌");
+    }
+  };
+
+  const afficherNotification = (msg) => {
+    setNotification(msg);
+    setTimeout(() => setNotification(""), 4000);
+  };
+
+  // --- NAVIGATION ---
   const moveNext = () => currentIndex < blocks.length - 1 && setCurrentIndex(currentIndex + 1);
   const movePrev = () => currentIndex > 0 && setCurrentIndex(currentIndex - 1);
 
@@ -125,50 +171,117 @@ const App = () => {
 
   return (
       <div className="flex h-screen bg-slate-900 text-white overflow-hidden font-sans">
-        {/* 1. SIDEBAR : MEMPOOL */}
+
+        {/* 1. SIDEBAR : LE WALLET */}
         <aside className="w-1/4 border-r border-slate-700 bg-slate-800/50 p-6 flex flex-col z-20">
-          <div className="flex items-center gap-2 mb-6 text-yellow-500 font-black italic">
-            <Cpu size={24} />
-            <h2 className="text-xl uppercase tracking-widest">Mempool Live</h2>
+          <div className="flex items-center gap-3 mb-8 text-blue-400 font-black italic">
+            <Wallet size={28} />
+            <h2 className="text-2xl uppercase tracking-widest">Mon Wallet</h2>
           </div>
-          <div className="space-y-4 overflow-y-auto pr-2 custom-scrollbar">
-            <AnimatePresence initial={false}>
-              {mempool.map((tx) => (
+
+          {/* Espace de Notification */}
+          <div className="h-12 mb-2">
+            <AnimatePresence>
+              {notification && (
                   <motion.div
-                      key={tx.id}
-                      initial={{ opacity: 0, x: -30 }}
-                      animate={{ opacity: 1, x: 0 }}
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.9 }}
-                      onClick={() => setSelectedTx(tx)}
-                      className="p-3 bg-slate-800 border border-slate-700 rounded-xl hover:border-yellow-500/50 cursor-pointer transition-all group"
+                      className="p-3 text-xs font-bold text-center bg-blue-600/20 text-blue-300 border border-blue-500/30 rounded-xl"
                   >
-                    <div className="flex justify-between items-center mb-3">
-                  <span className="text-[10px] font-mono font-bold text-yellow-600 bg-yellow-600/10 px-2 py-0.5 rounded">
-                    {tx.id}
-                  </span>
-                      <span className="text-sm font-bold text-white">
-                    {tx.amount} BTC
-                  </span>
-                    </div>
-                    <div className="space-y-1.5 border-t border-slate-700/50 pt-2">
-                      <div className="flex items-center gap-2 overflow-hidden">
-                        <span className="text-[9px] text-slate-500 font-bold w-7">FROM:</span>
-                        <span className="text-[9px] font-mono text-slate-400 truncate">{tx.from}</span>
-                      </div>
-                      <div className="flex items-center gap-2 overflow-hidden">
-                        <span className="text-[9px] text-slate-500 font-bold w-7">TO:</span>
-                        <span className="text-[9px] font-mono text-slate-400 truncate">{tx.to}</span>
-                      </div>
-                    </div>
+                    {notification}
                   </motion.div>
-              ))}
+              )}
             </AnimatePresence>
           </div>
+
+          {!token ? (
+              // FORMULAIRE DE CONNEXION
+              <form onSubmit={handleLogin} className="flex flex-col gap-4 bg-slate-900/50 p-6 rounded-2xl border border-slate-700 shadow-xl">
+                <h3 className="text-sm font-bold text-slate-400 flex items-center gap-2 mb-2 uppercase tracking-widest">
+                  <Lock size={16}/> Authentification
+                </h3>
+                <input
+                    className="bg-slate-800 p-3.5 rounded-xl border border-slate-600 text-sm outline-none focus:border-blue-500 transition-colors"
+                    placeholder="Nom d'utilisateur"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                />
+                <input
+                    type="password"
+                    className="bg-slate-800 p-3.5 rounded-xl border border-slate-600 text-sm outline-none focus:border-blue-500 transition-colors"
+                    placeholder="Mot de passe"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                />
+                <button type="submit" className="bg-blue-600 hover:bg-blue-500 p-3.5 rounded-xl font-black uppercase tracking-widest transition-all text-sm mt-2">
+                  Connexion
+                </button>
+              </form>
+          ) : (
+              // ESPACE CONNECTÉ
+              <div className="flex flex-col h-full overflow-y-auto pr-2 custom-scrollbar">
+
+                {/* AFFICHAGE DU SOLDE */}
+                <div className="bg-gradient-to-br from-blue-900 to-slate-800 border border-blue-500/30 p-5 rounded-2xl mb-4 shadow-lg text-center relative overflow-hidden">
+                  <div className="text-[10px] text-blue-300 font-bold uppercase tracking-widest mb-1">Solde Disponible</div>
+                  <div className="text-4xl font-black text-white">{solde.toFixed(2)} <span className="text-lg text-blue-400">BTC</span></div>
+
+                  {/* BOUTON FAUCET */}
+                  <button onClick={handleAjouterFonds} className="mt-4 w-full bg-slate-800 hover:bg-slate-700 border border-slate-600 p-2 rounded-xl text-xs font-bold flex justify-center items-center gap-2 text-slate-300 transition-colors">
+                    <PlusCircle size={14} className="text-green-400"/> Recevoir fonds (Testnet)
+                  </button>
+                </div>
+
+                {/* AIDE : ADRESSE DE TEST */}
+                <div className="bg-yellow-500/10 border border-yellow-500/30 p-4 rounded-xl mb-6 flex flex-col gap-2">
+                  <div className="text-[10px] text-yellow-500 font-bold uppercase">Adresse de test (Bob)</div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-[10px] font-mono text-slate-300 truncate bg-slate-900 p-2 rounded-lg flex-1">
+                      {adresseTest}
+                    </div>
+                    <button onClick={handleCopyAddress} title="Copier et Coller" className="bg-yellow-600 hover:bg-yellow-500 p-2 rounded-lg text-white transition-colors">
+                      <Copy size={14} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* FORMULAIRE DE TRANSACTION */}
+                <form onSubmit={handleSendTransaction} className="flex flex-col gap-4 bg-slate-900/50 p-6 rounded-2xl border border-slate-700 shadow-xl">
+                  <h3 className="text-sm font-black text-blue-400 flex items-center gap-2 mb-2 uppercase tracking-widest">
+                    <Send size={16}/> Envoyer
+                  </h3>
+                  <input
+                      className="bg-slate-800 p-3.5 rounded-xl border border-slate-600 text-sm outline-none focus:border-blue-500 font-mono transition-colors"
+                      placeholder="Adresse du destinataire"
+                      value={destinataire}
+                      onChange={(e) => setDestinataire(e.target.value)}
+                  />
+                  <div className="relative">
+                    <input
+                        type="number"
+                        step="0.01"
+                        className="w-full bg-slate-800 p-3.5 rounded-xl border border-slate-600 text-sm outline-none focus:border-blue-500 font-mono transition-colors"
+                        placeholder="Montant"
+                        value={montant}
+                        onChange={(e) => setMontant(e.target.value)}
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-500">BTC</span>
+                  </div>
+                  <button type="submit" className="bg-blue-600 hover:bg-blue-500 p-3.5 rounded-xl font-black uppercase tracking-widest transition-all text-xs mt-2 flex justify-center items-center gap-2">
+                    <Shield size={14} /> Signer & Envoyer
+                  </button>
+                </form>
+
+                <button onClick={handleLogout} className="mt-6 mb-4 flex items-center justify-center gap-2 text-slate-500 hover:text-red-400 p-4 text-sm font-bold transition-colors">
+                  <LogOut size={18}/> Se Déconnecter
+                </button>
+              </div>
+          )}
         </aside>
 
         {/* 2. SECTION PRINCIPALE */}
         <main className="flex-1 flex flex-col items-center justify-center p-10 relative overflow-hidden">
-          {/* HEADER & RECHERCHE */}
           <div className="z-20 text-center mb-6 w-full">
             <div className="flex items-center justify-center gap-3 mb-6">
               <Database className="text-blue-400" size={36} />
@@ -193,13 +306,11 @@ const App = () => {
               </button>
             </form>
 
-            {/* L'ancien bouton "Générer un Bloc" a été supprimé ici ! */}
             <div className="text-slate-500 text-sm flex items-center justify-center gap-2 animate-pulse mt-4">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div> En attente de nouveaux blocs automatiques...
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div> Réception automatique des blocs activée...
             </div>
           </div>
 
-          {/* 3. CARROUSEL DYNAMIQUE */}
           <div className="relative w-full h-96 flex items-center justify-center">
             {blocks.length === 0 ? (
                 <div className="text-slate-500 font-mono text-lg animate-pulse">Chargement de la blockchain...</div>
@@ -241,7 +352,7 @@ const App = () => {
                         <span className="text-[10px] uppercase font-bold text-blue-300 animate-pulse flex items-center gap-2">
                           <Shield size={12} /> Inspect Header
                         </span>
-                                <span className="text-[10px] font-mono text-blue-200/50">v1.0.4</span>
+                                <span className="text-[10px] font-mono text-blue-200/50">v1.2</span>
                               </motion.div>
                           )}
                         </motion.div>
@@ -251,7 +362,6 @@ const App = () => {
             )}
           </div>
 
-          {/* NAVIGATION BASSE */}
           <div className="mt-8 flex gap-14 z-20">
             <button
                 onClick={movePrev}
@@ -270,57 +380,7 @@ const App = () => {
           </div>
         </main>
 
-        {/* --- MODALE TRANSACTION (Mempool) --- */}
-        <AnimatePresence>
-          {selectedTx && (
-              <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 p-4"
-                  onClick={() => setSelectedTx(null)}
-              >
-                <motion.div
-                    initial={{ scale: 0.9, y: 30 }}
-                    animate={{ scale: 1, y: 0 }}
-                    exit={{ scale: 0.9 }}
-                    className="bg-slate-800 border border-slate-600 p-8 rounded-3xl w-full max-w-lg shadow-2xl relative"
-                    onClick={(e) => e.stopPropagation()}
-                >
-                  <button onClick={() => setSelectedTx(null)} className="absolute top-6 right-6 text-slate-400 hover:text-white">
-                    <X size={24} />
-                  </button>
-                  <h3 className="text-2xl font-black text-yellow-500 mb-8 flex items-center gap-3 italic uppercase tracking-tighter">
-                    <Coins size={28} /> Tx Details
-                  </h3>
-                  <div className="space-y-5">
-                    <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700/50">
-                      <label className="text-[10px] uppercase text-slate-500 font-bold mb-1 block">Hash ID</label>
-                      <div className="font-mono text-xs text-white break-all">{selectedTx.id}</div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700/50">
-                        <label className="text-[10px] text-blue-400 font-bold block mb-1">Sender</label>
-                        <div className="font-mono text-[10px] text-slate-300 truncate">{selectedTx.from}</div>
-                      </div>
-                      <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700/50">
-                        <label className="text-[10px] text-green-400 font-bold block mb-1">Receiver</label>
-                        <div className="font-mono text-[10px] text-slate-300 truncate">{selectedTx.to}</div>
-                      </div>
-                    </div>
-                    <div className="bg-yellow-500/5 p-5 rounded-xl border border-yellow-500/20 flex justify-between items-center">
-                      <div>
-                        <label className="text-[10px] text-yellow-600 font-bold block uppercase">Amount</label>
-                        <div className="text-2xl font-black text-white">{selectedTx.amount} <span className="text-sm text-yellow-500">BTC</span></div>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* --- MODALE HEADER DU BLOC (Avec Vraies Transactions Java) --- */}
+        {/* --- MODALE HEADER DU BLOC --- */}
         <AnimatePresence>
           {selectedBlock && (
               <motion.div
@@ -375,7 +435,7 @@ const App = () => {
                     </div>
                   </div>
 
-                  {/* LISTE DES TRANSACTIONS RÉELLES DE JAVA */}
+                  {/* LISTE DES TRANSACTIONS */}
                   <div className="bg-blue-600/10 p-5 rounded-xl border border-blue-500/20">
                     <label className="text-[10px] text-blue-400 font-bold block mb-3 uppercase flex justify-between">
                       <span>Transactions ({selectedBlock.transactions.length})</span>
@@ -383,25 +443,33 @@ const App = () => {
 
                     <div className="max-h-40 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
                       {selectedBlock.transactions.map((tx, idx) => {
-                        // Sécurité pour la casse des variables selon Jackson
                         const sender = tx.expediteur || tx.Expediteur;
                         const receiver = tx.destinataire || tx.Destinataire;
                         const amount = tx.quantite || tx.Quantite;
+                        const signature = tx.signatureTx || tx.SignatureTx;
 
                         return (
-                            <div key={idx} className="flex justify-between items-center bg-slate-900/80 p-3 rounded-lg border border-slate-700/50">
-                              <div className="flex flex-col w-[40%]">
-                                <span className="text-[8px] text-slate-500 font-bold">FROM</span>
-                                <span className="text-[10px] font-mono text-slate-300 truncate">{sender}</span>
+                            <div key={idx} className="flex flex-col bg-slate-900/80 p-3 rounded-lg border border-slate-700/50">
+                              <div className="flex justify-between items-center mb-2">
+                                <div className="flex flex-col w-[40%]">
+                                  <span className="text-[8px] text-slate-500 font-bold">FROM</span>
+                                  <span className="text-[10px] font-mono text-slate-300 truncate">{sender}</span>
+                                </div>
+                                <div className="flex flex-col w-[40%]">
+                                  <span className="text-[8px] text-slate-500 font-bold">TO</span>
+                                  <span className="text-[10px] font-mono text-slate-300 truncate">{receiver}</span>
+                                </div>
+                                <div className="flex flex-col items-end w-[20%]">
+                                  <span className="text-[8px] text-slate-500 font-bold">AMOUNT</span>
+                                  <span className="text-xs font-bold text-yellow-500">{amount ? amount.toFixed(2) : 0}</span>
+                                </div>
                               </div>
-                              <div className="flex flex-col w-[40%]">
-                                <span className="text-[8px] text-slate-500 font-bold">TO</span>
-                                <span className="text-[10px] font-mono text-slate-300 truncate">{receiver}</span>
-                              </div>
-                              <div className="flex flex-col items-end w-[20%]">
-                                <span className="text-[8px] text-slate-500 font-bold">AMOUNT</span>
-                                <span className="text-xs font-bold text-yellow-500">{amount ? amount.toFixed(2) : 0}</span>
-                              </div>
+                              {signature && (
+                                  <div className="border-t border-slate-700/50 pt-2 mt-1">
+                                    <span className="text-[8px] text-green-500 font-bold uppercase block mb-1">✓ Signature RSA Valide</span>
+                                    <span className="text-[8px] font-mono text-slate-500 truncate block">{signature}</span>
+                                  </div>
+                              )}
                             </div>
                         );
                       })}

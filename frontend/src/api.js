@@ -13,8 +13,8 @@ export const apiAffiche = {
     generer: () => api.get("generer"),
     miner: () => api.get("miner"),
     getBlockChain: () => api.get("all"),
+    getMempool: () => api.get("mempool"), // NOUVELLE ROUTE ICI !
 
-    // --- NOUVELLES ROUTES (AUTHENTIFICATION & WALLET) ---
     login: (user, password) =>
         api.post(`login?user=${user}&password=${password}`),
 

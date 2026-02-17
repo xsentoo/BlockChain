@@ -87,4 +87,8 @@ public class BlocController {
         blocService.remplirMempool();
         blocService.test4();
     }
+    @GetMapping("/mempool")
+    public List<Transaction> getMempool() {
+        return blocService.mempool;
+    }
 }

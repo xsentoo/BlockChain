@@ -1,8 +1,9 @@
 package com.uphf.blockchain.Entity;
 
-public class CoinBase{
+public class CoinBase {
     Double Recompense;
     int ExtraNonce;
+    String MinerAddress; // Adresse du mineur qui recoit la recompense
 
     public CoinBase(Double recompense, int extraNonce) {
         Recompense = recompense;
@@ -10,6 +11,12 @@ public class CoinBase{
     }
     public CoinBase(){
 
+    }
+
+    public CoinBase(Double recompense, int extraNonce, String minerAddress) {
+        Recompense = recompense;
+        ExtraNonce = extraNonce;
+        MinerAddress = minerAddress;
     }
 
     public Double getRecompense() {
@@ -26,5 +33,13 @@ public class CoinBase{
 
     public void setExtraNonce(int extraNonce) {
         ExtraNonce = extraNonce;
+    }
+
+    public String getMinerAddress() {
+        return MinerAddress;
+    }
+
+    public void setMinerAddress(String minerAddress) {
+        MinerAddress = minerAddress;
     }
 }

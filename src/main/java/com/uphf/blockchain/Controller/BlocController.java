@@ -3,56 +3,103 @@ package com.uphf.blockchain.Controller;
 import com.uphf.blockchain.Entity.*;
 import com.uphf.blockchain.Service.BlocService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("api/bloc")
-@CrossOrigin(origins = "http://localhost:5173")
-
+@CrossOrigin(origins = "*")
 
 public class BlocController {
     @Autowired
-    private  BlocService blocService;
-    @GetMapping("/all")
-    public List<Bloc> getAllBlocs() {
-        return blocService.blockchain;
-    }
+    private BlocService blocService;
 
     @GetMapping("/generer")
-    public Bloc  genererBloc() {
+    public Bloc genererBloc() {
         Bloc bloc = blocService.genererBlocTest();
-       return bloc;
-    }
-
-    @GetMapping("/miner")
-    public Bloc minerBloc(){
-        Bloc bloc = blocService.genererBlocTest();
-      String merkleroot = blocService.trouverMerkle(
-              bloc.getBlockBody().getTransactionList(),
-              0,bloc.getBlockBody().getTransactionList().size() - 1
-      );
-        bloc.getBlockHeader().setMerkleRoot(merkleroot);
-        blocService.consensus(bloc);
-        blocService.blockchain.add(bloc);
-        blocService.sauvegarderEnJson();
         return bloc;
     }
+
+    /**
+     * POST /api/bloc/miner — Miner un bloc avec les transactions du mempool
+     * Body optionnel : { "minerAddress": "adresse_du_wallet_mineur" }
+     */
+    @PostMapping("/miner")
+    public ResponseEntity<?> minerBloc(@RequestBody(required = false) Map<String, String> body) {
+        try {
+            String minerAddress = null;
+            if (body != null && body.containsKey("minerAddress")) {
+                minerAddress = body.get("minerAddress");
+            }
+            Bloc bloc = blocService.minerBloc(minerAddress);
+            return ResponseEntity.ok(Map.of(
+                    "message", "Bloc miné avec succès !",
+                    "bloc", bloc,
+                    "reward", 6.25,
+                    "minerAddress", minerAddress != null ? minerAddress : "N/A"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * GET /api/bloc/miner — Minage rapide sans wallet (compatibilité)
+     */
+    @GetMapping("/miner")
+    public Bloc minerBlocGet() {
+        return blocService.minerBloc(null);
+    }
+
+    // ==================== MEMPOOL ====================
+
+    /**
+     * GET /api/bloc/mempool — Contenu du mempool
+     */
+    @GetMapping("/mempool")
+    public ResponseEntity<List<Transaction>> getMempool() {
+        return ResponseEntity.ok(blocService.getMempool());
+    }
+
+    /**
+     * DELETE /api/bloc/mempool/{index} — Supprimer une transaction du mempool
+     */
+    @DeleteMapping("/mempool/{index}")
+    public ResponseEntity<?> supprimerDuMempool(@PathVariable int index) {
+        try {
+            Transaction removed = blocService.supprimerDuMempool(index);
+            return ResponseEntity.ok(Map.of(
+                    "message", "Transaction supprimée du mempool",
+                    "transaction", removed));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * DELETE /api/bloc/mempool — Vider tout le mempool
+     */
+    @DeleteMapping("/mempool")
+    public ResponseEntity<?> viderMempool() {
+        blocService.viderMempool();
+        return ResponseEntity.ok(Map.of("message", "Mempool vidé"));
+    }
+
+    // ==================== BLOCKCHAIN ====================
+
+    /**
+     * GET /api/bloc/blockchain — Retourne toute la blockchain
+     */
+    @GetMapping("/blockchain")
+    public ResponseEntity<List<Bloc>> getBlockchain() {
+        return ResponseEntity.ok(blocService.getBlockchain());
+    }
+
     @GetMapping("/3")
-    public void afficher3(){
+    public void afficher3() {
         blocService.test3();
     }
-
-    @GetMapping("/4")
-    public void afficher4(){
-        blocService.remplirMempool();
-        blocService.test4();
-    }
-
 
 }

@@ -1,15 +1,55 @@
 import axios from 'axios';
 
-const API_BASE_URL = "http://localhost:8080/api/bloc/";
+const API_BASE = "/api";
+
 const api = axios.create({
-    baseURL: API_BASE_URL,
-    headers: {
-        "Content-Type": "application/json"
-    }
+  baseURL: API_BASE,
+  headers: { "Content-Type": "application/json" }
 });
-export const apiAffiche = {
-    generer: () => api.get("generer"),
-    miner: () => api.get("miner")
+
+// ==================== BLOC API ====================
+export const apiBloc = {
+  generer: () => api.get("/bloc/generer"),
+  // Minage avec adresse du mineur (POST)
+  miner: (minerAddress) => api.post("/bloc/miner", { minerAddress }),
+  // Minage rapide sans wallet (GET)
+  minerRapide: () => api.get("/bloc/miner"),
+  // Blockchain complète
+  getBlockchain: () => api.get("/bloc/blockchain"),
+  // Mempool
+  getMempool: () => api.get("/bloc/mempool"),
+  deleteFromMempool: (index) => api.delete(`/bloc/mempool/${index}`),
+  clearMempool: () => api.delete("/bloc/mempool"),
+};
+
+// ==================== WALLET API ====================
+export const apiWallet = {
+  // Créer un wallet
+  create: (label) => api.post("/wallet", { label }),
+
+  // Lister tous les wallets
+  getAll: () => api.get("/wallet"),
+
+  // Détails d'un wallet
+  getOne: (address) => api.get(`/wallet/${address}`),
+
+  // Solde d'un wallet
+  getBalance: (address) => api.get(`/wallet/${address}/balance`),
+
+  // Faucet : créditer un wallet avec des BTC de test
+  faucet: (address, montant = 1.0) => api.post(`/wallet/${address}/faucet`, { montant }),
+
+  // Signer une transaction
+  sign: (address, destinataire, quantite) =>
+    api.post(`/wallet/${address}/sign`, { destinataire, quantite }),
+
+  // Vérifier une signature
+  verify: (publicKey, expediteur, destinataire, quantite, signature) =>
+    api.post("/wallet/verify", { publicKey, expediteur, destinataire, quantite, signature }),
+
+  // Envoyer des fonds (ajoute au mempool)
+  send: (address, destinataire, montant, fees = 0) =>
+    api.post(`/wallet/${address}/send`, { destinataire, montant, fees }),
 };
 
 export default api;

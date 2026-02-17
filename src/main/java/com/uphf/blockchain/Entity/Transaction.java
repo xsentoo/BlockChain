@@ -1,14 +1,24 @@
 package com.uphf.blockchain.Entity;
 
-public class Transaction{
-    String Expediteur ;
+public class Transaction {
+    String Expediteur;
     String Destinataire;
     Double Quantite;
+    Double Fees; // Frais de transaction
+    String Signature; // Signature ECDSA de la transaction
 
     public Transaction(String expediteur, String destinataire, Double quantite) {
         Expediteur = expediteur;
         Destinataire = destinataire;
         Quantite = quantite;
+        Fees = 0.0;
+    }
+
+    public Transaction(String expediteur, String destinataire, Double quantite, Double fees) {
+        Expediteur = expediteur;
+        Destinataire = destinataire;
+        Quantite = quantite;
+        Fees = fees;
     }
     public Transaction(){
 
@@ -36,5 +46,21 @@ public class Transaction{
 
     public void setExpediteur(String expediteur) {
         Expediteur = expediteur;
+    }
+
+    public String getSignature() {
+        return Signature;
+    }
+
+    public void setSignature(String signature) {
+        Signature = signature;
+    }
+
+    public Double getFees() {
+        return Fees;
+    }
+
+    public void setFees(Double fees) {
+        Fees = fees;
     }
 }

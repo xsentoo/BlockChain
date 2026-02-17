@@ -23,6 +23,7 @@ import java.util.Random;
 public class BlocService {
 
     public List<Bloc> blockchain = new ArrayList<>();
+    public List<Transaction> mempool = new ArrayList<>();
     private ObjectMapper objectMapper;
     private final String FILE_NAME = "blockchain.json";
 
@@ -52,6 +53,15 @@ public class BlocService {
             System.out.println(" Erreur d'écriture du JSON : " + e.getMessage());
         }
     }
+
+    public void remplirMempool()
+    {
+        for(int i = 0; i< 100; i++)
+        {
+            mempool.add(genererTransactionTest());
+        }
+    }
+
     public Bloc genererBlocTest()
     {
         Header headertest = genererHeaderTest();
@@ -108,7 +118,7 @@ public class BlocService {
         List<Transaction> transList = new ArrayList<>();
         for(int i = 0; i< 4; i++)
         {
-            transList.add(genererTransactionTest());
+            transList.add(mempool.get(i));
         }
         Body body = new Body(genererCoinbaseTest() , transList);
         return body;
@@ -311,6 +321,31 @@ public class BlocService {
         return true;
     }
 
+    public void minerBloc()
+    {
+        Body body = genererBodyTest();
+        Bloc blocPrecedent = blockchain.getLast();
+        String hashPrecedent = hasherHeader(blocPrecedent.getBlockHeader());
+        String merkleRoot = hasherBody(body);
+        Header header = new Header(
+            merkleRoot, 
+            LocalDate.now(),
+            hashPrecedent,
+                3,
+            0);
+        Bloc newBloc = new Bloc(header,body);
+        if(consensus(newBloc))
+        {
+            blockchain.add(newBloc);
+            sauvegarderEnJson();
+            for(int i = 0; i< 4; i++)
+            {
+                mempool.remove(i);
+                mempool.add(genererTransactionTest());
+            }
+        }
+    }
+
     public void test2(){
         Bloc bloc = genererBlocTest();
         Header header = bloc.getBlockHeader();
@@ -370,6 +405,23 @@ public class BlocService {
         System.out.println("Valide:" + validateTransactions(body, hashBody) );
     }
 
+    void afficherBlockChain()
+    {
+        System.out.println("BLOCKCHAIN COMPLETE" );
+        for(int i = 0;i<blockchain.size();i++)
+        {
+            System.out.println("BLOC "  + i); 
+            afficherBlock(blockchain.get(i));
+        }
+    }
+
+    public void test4()
+    {
+        System.out.println("TEST 4---------" );
+        afficherBlockChain();
+        minerBloc();
+        afficherBlockChain();
+    }
 
 
 

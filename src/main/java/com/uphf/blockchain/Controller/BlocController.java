@@ -48,5 +48,11 @@ public class BlocController {
         blocService.test3();
     }
 
+    @GetMapping("/4")
+    public void afficher4(){
+        blocService.remplirMempool();
+        blocService.test4();
+    }
+
 
 }
